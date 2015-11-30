@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "metabuilder.h"
+#include <commctrl.h>
 
 #define MAX_LOADSTRING 100
 
@@ -16,6 +17,12 @@ ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    Account(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    SizeAndStops(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    DataInterval(HWND, UINT, WPARAM, LPARAM);
+BOOL				CenterDlgWindows(HWND);
+HWND				CreateStatusBar(HWND, HINSTANCE);
+BOOL				SetStatusBarParts(HWND, HWND);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -97,8 +104,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
+   int w = 900, h = 600;
+   int x = (GetSystemMetrics(SM_CXSCREEN) - w) / 2;
+   int y = (GetSystemMetrics(SM_CYSCREEN) - h - 100) / 2;
+
    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+      x, y, w, h, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
    {
@@ -125,13 +136,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-    case WM_COMMAND:
+	case WM_CREATE:
+		{
+			INITCOMMONCONTROLSEX icex;
+			icex.dwICC = ICC_BAR_CLASSES;
+			InitCommonControlsEx(&icex);
+			CreateStatusBar(hWnd, hInst);
+		}
+		break;
+	case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
             // Parse the menu selections:
             switch (wmId)
             {
-            case IDM_ABOUT:
+			case IDM_ACCOUNT:
+				DialogBox(hInst, MAKEINTRESOURCE(IDD_ACCOUNT), hWnd, Account);
+				break;
+			case IDM_SIZENSTOPS:
+				DialogBox(hInst, MAKEINTRESOURCE(IDD_SIZENSTOPS), hWnd, SizeAndStops);
+				break;
+			case IDM_DATAINT:
+				DialogBox(hInst, MAKEINTRESOURCE(IDD_DATAINT), hWnd, DataInterval);
+				break;
+			case IDM_ABOUT:
                 DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUT), hWnd, About);
                 break;
             case IDM_EXIT:
@@ -150,6 +178,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
+	case WM_SIZE:
+		// Auto-resize statusbar
+		SendMessage(GetDlgItem(hWnd, IDC_STATUSBAR), WM_SIZE, 0, 0);
+		SetStatusBarParts(hWnd, GetDlgItem(hWnd, IDC_STATUSBAR));
+		break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
@@ -159,13 +192,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-// Message handler for about box.
+// Message handler for About box.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
     switch (message)
     {
     case WM_INITDIALOG:
+		CenterDlgWindows(hDlg);
         return (INT_PTR)TRUE;
 
     case WM_COMMAND:
@@ -177,4 +211,131 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
         break;
     }
     return (INT_PTR)FALSE;
+}
+
+// Message handler for Account Settings box.
+INT_PTR CALLBACK Account(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		CenterDlgWindows(hDlg);
+		return (INT_PTR)TRUE;
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
+// Message handler for Trading Size and Stops box.
+INT_PTR CALLBACK SizeAndStops(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		CenterDlgWindows(hDlg);
+		return (INT_PTR)TRUE;
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
+// Message handler for Data Interval box.
+INT_PTR CALLBACK DataInterval(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	UNREFERENCED_PARAMETER(lParam);
+	switch (message)
+	{
+	case WM_INITDIALOG:
+		CenterDlgWindows(hDlg);
+		return (INT_PTR)TRUE;
+
+	case WM_COMMAND:
+		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
+		{
+			EndDialog(hDlg, LOWORD(wParam));
+			return (INT_PTR)TRUE;
+		}
+		break;
+	}
+	return (INT_PTR)FALSE;
+}
+
+// Center dialog box relative to its parent
+BOOL CenterDlgWindows(HWND hDlg)
+{
+	HWND hParent = GetParent(hDlg);
+	RECT rcDlg, rcParent;
+
+	GetWindowRect(hDlg, &rcDlg);
+	GetWindowRect(hParent, &rcParent);
+
+	int nWidth = rcDlg.right - rcDlg.left;
+	int nHeight = rcDlg.bottom - rcDlg.top;
+
+	int nX = ((rcParent.right - rcParent.left) - nWidth) / 2 + rcParent.left;
+	int nY = ((rcParent.bottom - rcParent.top) - nHeight) / 2 + rcParent.top;
+
+	int nScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+	int nScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+
+	// make sure that the dialog box never moves outside of the screen
+	if (nX < 0) nX = 0;
+	if (nY < 0) nY = 0;
+	if (nX + nWidth > nScreenWidth) nX = nScreenWidth - nWidth;
+	if (nY + nHeight > nScreenHeight) nY = nScreenHeight - nHeight;
+
+	MoveWindow(hDlg, nX, nY, nWidth, nHeight, FALSE);
+
+	return TRUE;
+}
+
+HWND CreateStatusBar(HWND hParent, HINSTANCE hInst)
+{
+	HWND hStatus = CreateWindowEx(
+		0,						// no extended styles
+		STATUSCLASSNAME,		// name of status bar class
+		(PCTSTR)NULL,			// no text when first created
+		WS_CHILD | WS_VISIBLE,	// creates a visible child window
+		0, 0, 0, 0,				// ignores size and position
+		hParent,				// handle to parent window
+		(HMENU)IDC_STATUSBAR,	// child window identifier
+		hInst,					// handle to application instance
+		NULL);					// no window creation data
+
+	SetStatusBarParts(hParent, hStatus);
+
+	return hStatus;
+}
+
+BOOL SetStatusBarParts(HWND hParent, HWND hStatus)
+{
+	// Get the coordinates of the parent window's client area.
+	RECT rcClient;
+	GetClientRect(hParent, &rcClient);
+	// Set parts
+	int i = 200;
+	int a = (rcClient.right - i) / 2;
+	int b = a + i;
+	int paParts[] = { a, b, -1 };
+
+	// Tell the status bar to create the window parts.
+	SendMessage(hStatus, SB_SETPARTS, (WPARAM)(sizeof(paParts) / sizeof(int)), (LPARAM)paParts);
+
+	return TRUE;
 }
