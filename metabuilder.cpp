@@ -4,6 +4,9 @@
 #include "stdafx.h"
 #include "metabuilder.h"
 #include <commctrl.h>
+#include <string>
+
+using namespace std;
 
 #define MAX_LOADSTRING 100
 
@@ -13,16 +16,18 @@ WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 
 // Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
+ATOM                MyRegisterClass(HINSTANCE);
 BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    Account(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    SizeAndStops(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    DataInterval(HWND, UINT, WPARAM, LPARAM);
-BOOL				CenterDlgWindows(HWND);
+INT_PTR CALLBACK    AboutDlgProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    AccountDlgProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    SizeAndStopsDlgProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    DataIntervalDlgProc(HWND, UINT, WPARAM, LPARAM);
+BOOL				CenterDlgWindow(HWND);
 HWND				CreateStatusBar(HWND, HINSTANCE);
 BOOL				SetStatusBarParts(HWND, HWND);
+LRESULT CALLBACK	EditDoubleControlProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
+LRESULT CALLBACK	EditIntControlProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -151,16 +156,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             switch (wmId)
             {
 			case IDM_ACCOUNT:
-				DialogBox(hInst, MAKEINTRESOURCE(IDD_ACCOUNT), hWnd, Account);
+				DialogBox(hInst, MAKEINTRESOURCE(IDD_ACCOUNT), hWnd, AccountDlgProc);
 				break;
 			case IDM_SIZENSTOPS:
-				DialogBox(hInst, MAKEINTRESOURCE(IDD_SIZENSTOPS), hWnd, SizeAndStops);
+				DialogBox(hInst, MAKEINTRESOURCE(IDD_SIZENSTOPS), hWnd, SizeAndStopsDlgProc);
 				break;
 			case IDM_DATAINT:
-				DialogBox(hInst, MAKEINTRESOURCE(IDD_DATAINT), hWnd, DataInterval);
+				DialogBox(hInst, MAKEINTRESOURCE(IDD_DATAINT), hWnd, DataIntervalDlgProc);
 				break;
 			case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUT), hWnd, About);
+                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUT), hWnd, AboutDlgProc);
                 break;
             case IDM_EXIT:
                 DestroyWindow(hWnd);
@@ -193,91 +198,94 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 // Message handler for About box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK AboutDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
     switch (message)
     {
     case WM_INITDIALOG:
-		CenterDlgWindows(hDlg);
-        return (INT_PTR)TRUE;
+		CenterDlgWindow(hDlg);
+        return TRUE;
 
     case WM_COMMAND:
         if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
         {
             EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
+            return TRUE;
         }
         break;
     }
-    return (INT_PTR)FALSE;
+    return FALSE;
 }
 
 // Message handler for Account Settings box.
-INT_PTR CALLBACK Account(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK AccountDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
 	{
 	case WM_INITDIALOG:
-		CenterDlgWindows(hDlg);
-		return (INT_PTR)TRUE;
+		CenterDlgWindow(hDlg);
+		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_DEPOSIT), EditDoubleControlProc, 0, 0);
+		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_LEVERAGE), EditIntControlProc, 0, 0);
+		SendMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hDlg, IDC_EDIT_DEPOSIT), TRUE);
+		return FALSE;
 
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
+			return TRUE;
 		}
 		break;
 	}
-	return (INT_PTR)FALSE;
+	return FALSE;
 }
 
 // Message handler for Trading Size and Stops box.
-INT_PTR CALLBACK SizeAndStops(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK SizeAndStopsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
 	{
 	case WM_INITDIALOG:
-		CenterDlgWindows(hDlg);
-		return (INT_PTR)TRUE;
+		CenterDlgWindow(hDlg);
+		return TRUE;
 
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
+			return TRUE;
 		}
 		break;
 	}
-	return (INT_PTR)FALSE;
+	return FALSE;
 }
 
 // Message handler for Data Interval box.
-INT_PTR CALLBACK DataInterval(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK DataIntervalDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	UNREFERENCED_PARAMETER(lParam);
 	switch (message)
 	{
 	case WM_INITDIALOG:
-		CenterDlgWindows(hDlg);
-		return (INT_PTR)TRUE;
+		CenterDlgWindow(hDlg);
+		return TRUE;
 
 	case WM_COMMAND:
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
-			return (INT_PTR)TRUE;
+			return TRUE;
 		}
 		break;
 	}
-	return (INT_PTR)FALSE;
+	return FALSE;
 }
 
 // Center dialog box relative to its parent
-BOOL CenterDlgWindows(HWND hDlg)
+BOOL CenterDlgWindow(HWND hDlg)
 {
 	HWND hParent = GetParent(hDlg);
 	RECT rcDlg, rcParent;
@@ -338,4 +346,63 @@ BOOL SetStatusBarParts(HWND hParent, HWND hStatus)
 	SendMessage(hStatus, SB_SETPARTS, (WPARAM)(sizeof(paParts) / sizeof(int)), (LPARAM)paParts);
 
 	return TRUE;
+}
+
+LRESULT CALLBACK EditDoubleControlProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+	LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	if (uMsg == WM_CHAR)
+	{
+		wchar_t wszDecimal[3];
+		GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SDECIMAL,
+			wszDecimal, sizeof(wszDecimal) / sizeof(wchar_t));
+		wchar_t wszText[13];
+		GetWindowText(hWnd, wszText, sizeof(wszText) / sizeof(wchar_t));
+		wstring wstr(wszText);
+		size_t f = wstr.find(wszDecimal);
+		size_t len = wcslen(wszText);
+		int pos;
+		SendMessage(hWnd, EM_GETSEL, (WPARAM)&pos, 0);
+
+		// Make sure we only allow specific characters
+		if (!((wParam >= '0' && wParam <= '9')
+			|| wParam == VK_BACK
+			|| (wParam == wszDecimal[0] && f == string::npos)))
+		{
+			return FALSE;
+		}
+
+		// limit number of decimals and integers
+		if (wParam != VK_BACK && 
+			((wParam != wszDecimal[0] && f == string::npos && len == 9) ||
+			(f != string::npos && ((pos <= f && f == 9) || (pos > f && len - f == 3)))))
+		{
+			return FALSE;
+		}
+
+	}
+
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
+LRESULT CALLBACK EditIntControlProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+	LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	if (uMsg == WM_CHAR)
+	{
+		// Make sure we only allow specific characters
+		if (!((wParam >= '0' && wParam <= '9')
+			|| wParam == VK_BACK))
+		{
+			return FALSE;
+		}
+
+		// limit number of characters
+		if (wParam != VK_BACK && GetWindowTextLength(hWnd) == 4)
+		{
+			return FALSE;
+		}
+	}
+
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
