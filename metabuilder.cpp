@@ -3,8 +3,6 @@
 
 #include "stdafx.h"
 #include "metabuilder.h"
-#include <commctrl.h>
-#include <string>
 
 using namespace std;
 
@@ -12,8 +10,12 @@ using namespace std;
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
-WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+WCHAR szTitle[MAX_LOADSTRING];                  // title bar text
+WCHAR szWindowClass[MAX_LOADSTRING];            // main window class name
+
+int deposit = 1000;
+int leverage = 200;
+
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE);
@@ -26,8 +28,13 @@ INT_PTR CALLBACK    DataIntervalDlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL				CenterDlgWindow(HWND);
 HWND				CreateStatusBar(HWND, HINSTANCE);
 BOOL				SetStatusBarParts(HWND, HWND);
-LRESULT CALLBACK	EditDoubleControlProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
-LRESULT CALLBACK	EditIntControlProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
+LRESULT CALLBACK	DepositProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
+LRESULT CALLBACK	LeverageProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
+LRESULT CALLBACK	InLotsProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
+LRESULT CALLBACK	InPerCentProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
+LRESULT CALLBACK	SLTPProc(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
+BOOL				EditControlCharHandler(HWND, WPARAM, int, int, bool);
+BOOL				EditControlKeyDownHandler(HWND, WPARAM, int, int, bool);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -68,12 +75,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 }
 
 
-
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
+//  Registers the window class.
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -95,16 +97,8 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
+
+//   Saves instance handle and creates main window
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
@@ -127,16 +121,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    return TRUE;
 }
 
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE:  Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
-//
+//  Processes messages for the main window.
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -225,19 +210,24 @@ INT_PTR CALLBACK AccountDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM l
 	switch (message)
 	{
 	case WM_INITDIALOG:
+	{
 		CenterDlgWindow(hDlg);
-		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_DEPOSIT), EditDoubleControlProc, 0, 0);
-		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_LEVERAGE), EditIntControlProc, 0, 0);
-		SendMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hDlg, IDC_EDIT_DEPOSIT), TRUE);
-		return FALSE;
-
+		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_DEPOSIT), DepositProc, 0, 0);
+		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_LEVERAGE), LeverageProc, 0, 0);
+		SetWindowText(GetDlgItem(hDlg, IDC_EDIT_DEPOSIT), to_wstring(deposit).c_str());
+		SetWindowText(GetDlgItem(hDlg, IDC_EDIT_LEVERAGE), to_wstring(leverage).c_str());
+		//SendMessage(hDlg, WM_NEXTDLGCTL, (WPARAM)GetDlgItem(hDlg, IDC_EDIT_DEPOSIT), TRUE);
+		return TRUE;
+	}
 	case WM_COMMAND:
+	{
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
 			return TRUE;
 		}
 		break;
+	}
 	}
 	return FALSE;
 }
@@ -249,16 +239,23 @@ INT_PTR CALLBACK SizeAndStopsDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 	switch (message)
 	{
 	case WM_INITDIALOG:
+	{
 		CenterDlgWindow(hDlg);
+		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_LOTS), InLotsProc, 0, 0);
+		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_PC), InPerCentProc, 0, 0);
+		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_SL), SLTPProc, 0, 0);
+		SetWindowSubclass(GetDlgItem(hDlg, IDC_EDIT_TP), SLTPProc, 0, 0);
 		return TRUE;
-
+	}
 	case WM_COMMAND:
+	{
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
 			return TRUE;
 		}
 		break;
+	}
 	}
 	return FALSE;
 }
@@ -270,16 +267,19 @@ INT_PTR CALLBACK DataIntervalDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPA
 	switch (message)
 	{
 	case WM_INITDIALOG:
+	{
 		CenterDlgWindow(hDlg);
 		return TRUE;
-
+	}
 	case WM_COMMAND:
+	{
 		if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
 		{
 			EndDialog(hDlg, LOWORD(wParam));
 			return TRUE;
 		}
 		break;
+	}
 	}
 	return FALSE;
 }
@@ -348,61 +348,185 @@ BOOL SetStatusBarParts(HWND hParent, HWND hStatus)
 	return TRUE;
 }
 
-LRESULT CALLBACK EditDoubleControlProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+// Deposit edit control proc
+LRESULT CALLBACK DepositProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 	LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	if (uMsg == WM_CHAR)
+	switch (uMsg)
 	{
-		wchar_t wszDecimal[3];
-		GetLocaleInfoEx(LOCALE_NAME_USER_DEFAULT, LOCALE_SDECIMAL,
-			wszDecimal, sizeof(wszDecimal) / sizeof(wchar_t));
-		wchar_t wszText[13];
-		GetWindowText(hWnd, wszText, sizeof(wszText) / sizeof(wchar_t));
-		wstring wstr(wszText);
-		size_t f = wstr.find(wszDecimal);
-		size_t len = wcslen(wszText);
-		int pos;
-		SendMessage(hWnd, EM_GETSEL, (WPARAM)&pos, 0);
-
-		// Make sure we only allow specific characters
-		if (!((wParam >= '0' && wParam <= '9')
-			|| wParam == VK_BACK
-			|| (wParam == wszDecimal[0] && f == string::npos)))
-		{
+	case WM_CHAR:
+	{
+		if (!EditControlCharHandler(hWnd, wParam, 9, 0, false))
 			return FALSE;
-		}
-
-		// limit number of decimals and integers
-		if (wParam != VK_BACK && 
-			((wParam != wszDecimal[0] && f == string::npos && len == 9) ||
-			(f != string::npos && ((pos <= f && f == 9) || (pos > f && len - f == 3)))))
-		{
-			return FALSE;
-		}
-
+		break;
 	}
-
+	case WM_CONTEXTMENU:
+		return FALSE;
+	}
 	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
-LRESULT CALLBACK EditIntControlProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+// Leverage edit control proc
+LRESULT CALLBACK LeverageProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 	LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
-	if (uMsg == WM_CHAR)
+	switch (uMsg)
 	{
-		// Make sure we only allow specific characters
-		if (!((wParam >= '0' && wParam <= '9')
-			|| wParam == VK_BACK))
-		{
+	case WM_CHAR:
+	{
+		if (!EditControlCharHandler(hWnd, wParam, 4, 0, false))
 			return FALSE;
-		}
+		break;
+	}
+	case WM_CONTEXTMENU:
+		return FALSE;
+	}
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
 
-		// limit number of characters
-		if (wParam != VK_BACK && GetWindowTextLength(hWnd) == 4)
-		{
+// In Lots edit control proc
+LRESULT CALLBACK InLotsProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+	LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch (uMsg)
+	{
+	case WM_KEYDOWN:
+	{
+		if (wParam == VK_DELETE && !EditControlKeyDownHandler(hWnd, wParam, 3, 2, false))
 			return FALSE;
-		}
+		break;
+	}
+	case WM_CHAR:
+	{
+		
+		if (!EditControlCharHandler(hWnd, wParam, 3, 2, false))
+			return FALSE;
+		break;
+	}
+	case WM_CONTEXTMENU:
+		return FALSE;
+	}
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
+// In Per Cent edit control proc
+LRESULT CALLBACK InPerCentProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+	LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch (uMsg)
+	{
+	case WM_KEYDOWN:
+	{
+		if (wParam == VK_DELETE && !EditControlKeyDownHandler(hWnd, wParam, 3, 2, true))
+			return FALSE;
+		break;
+	}
+	case WM_CHAR:
+	{
+
+		if (!EditControlCharHandler(hWnd, wParam, 3, 2, true))
+			return FALSE;
+		break;
+	}
+	case WM_CONTEXTMENU:
+		return FALSE;
+	}
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
+// Stop Loss/Take Profit edit control proc
+LRESULT CALLBACK SLTPProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+	LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch (uMsg)
+	{
+	case WM_CHAR:
+	{
+		if (!EditControlCharHandler(hWnd, wParam, 6, 0, false))
+			return FALSE;
+		break;
+	}
+	case WM_CONTEXTMENU:
+		return FALSE;
+	}
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+
+
+
+// validates char input in edit controls
+BOOL EditControlCharHandler(HWND hWnd, WPARAM wParam, int i, int d, bool b)
+{
+	wstring s;
+	int n = GetWindowTextLength(hWnd);
+	s.resize(n + 1);						//+1 for \0
+	GetWindowText(hWnd, &s[0], n + 1);
+	s.resize(n);
+	int f = (int)s.find('.');
+	int wp, lp;
+	SendMessage(hWnd, EM_GETSEL, (WPARAM)&wp, (LPARAM)&lp);
+	double k = -1;
+	if (n > 0 && f != 0) k = stod(s, NULL);
+
+	if (wParam == VK_BACK)
+	{
+		if (f == string::npos ? true : (wp == lp ? (wp != f + 1 ? true : n - 1 <= i) : 
+			((f < wp || f >= lp) ? true : n - lp + wp <= i)))
+			return TRUE;
+		else
+			return FALSE;
 	}
 
-	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+	// enable selecting all by CTRL+A
+	if (wParam == 1)
+	{
+		SendMessage(hWnd, EM_SETSEL, 0, (LPARAM)GetWindowTextLength(hWnd));
+		return TRUE;
+	}
+
+	// prohibit inputing more than 100 for percent input fields
+	if (b)
+	{
+		if (k == 100) return FALSE;
+		if (k == 10 && !((wParam == '0' && wp != 0) || wParam == '.' || (f != string::npos && wp > f)))
+			return FALSE;
+		if ((f == string::npos ? n >= i : f >= i) && wp == lp - 1 && wp == 0 && 
+			(k > 0 || (k == 0 && wParam != '1')))
+			return FALSE;
+		if (k > 10) --i;
+	}
+	// only allow specific characters
+	if (!((wParam >= '0' && wParam <= '9')
+		|| (wParam == '.' && d != 0 && n != 0 && f == string::npos)))
+		return FALSE;
+
+	// limit number of characters
+	if (wp == lp && ((wParam != '.' && f == string::npos && n >= i) ||
+		(f != string::npos && ((wp <= f && f >= i) || (wp > f && n - f >= d + 1)))))
+		return FALSE;
+
+	return TRUE;
+}
+
+// validates keydown messages in edit controls
+BOOL EditControlKeyDownHandler(HWND hWnd, WPARAM wParam, int i, int d, bool b)
+{
+	wstring s;
+	int n = GetWindowTextLength(hWnd);
+	s.resize(n + 1);						//+1 for \0
+	GetWindowText(hWnd, &s[0], n + 1);
+	s.resize(n);
+	int f = (int)s.find('.');
+	int wp, lp;
+	SendMessage(hWnd, EM_GETSEL, (WPARAM)&wp, (LPARAM)&lp);
+
+	if (wParam == VK_DELETE)
+	{
+		if (f == string::npos ? true : (wp != f ? true : n - 1 <= i))
+			return TRUE;
+		else
+			return FALSE;
+	}
+
+	return TRUE;
 }
