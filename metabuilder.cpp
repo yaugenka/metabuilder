@@ -472,40 +472,33 @@ BOOL EditControlCharHandler(HWND hWnd, WPARAM wParam, int i, int d, int v)
 		|| wParam == VK_BACK))
 		return FALSE;
 
-	// limit size and length
 	wstring s;
-	int n = GetWindowTextLength(hWnd) + 1; //+1 for \0
-	s.resize(n);						
-	GetWindowText(hWnd, &s[0], n);
-	s.resize(n - 1);
+	int n = GetWindowTextLength(hWnd);
+	s.resize(n + 1);						//+1 for \0
+	GetWindowText(hWnd, &s[0], s.length());
+	s.resize(n);
 	int wp, lp;
 	SendMessage(hWnd, EM_GETSEL, (WPARAM)&wp, (LPARAM)&lp);
+	int f = (int)s.find('.');
+
+	// disallow a second period
+	if (wParam == '.' && f != string::npos && (wp > f || f >= lp))
+		return FALSE;
+
 	double k = -1;
-	if (wParam == VK_BACK) wp == lp ? s.erase(wp - 1, 1) : s.erase(wp, lp - wp);
+	if (wParam == VK_BACK)
+	{
+		if (n == 0) return TRUE;
+		wp == lp ? s.erase(wp - 1, 1) : s.erase(wp, lp - wp);
+	}
 	else s.replace(wp, lp - wp, 1, (wchar_t)wParam);
 	n = s.length();
 	if (n > 0 && s[0] != '.') k = stod(s, NULL);
-	int f = (int)s.find('.');
+	f = (int)s.find('.');
 
-	if ((v != 0 && k > v) || ())
+	// limit size and length
+	if ((v != 0 && k > v) || (f == string::npos ? n > i : (f > i || n - f - 1 > d)))
 		return FALSE;
-
-
-	if (wParam == VK_BACK)
-	{
-		if (f != string::npos && ((wp == lp && wp == f + 1 && n - 1 > i) ||
-			((wp <= f && f < lp) && wp + n - lp > i)))
-			return FALSE;
-		return TRUE;
-	}
-
-	// limit length
-	if (wp == lp ? (f == string::npos ? wParam != '.' && n >= i :
-		(wParam == '.' || (wp <= f && f >= i) || (wp > f && n - f >= d + 1))) :
-			(f != string::npos && ((wp <= f && f < lp) ? wParam != '.' && wp + n - lp + 1 > i : wParam == '.')))
-		return FALSE;
-
-	return TRUE;
 }
 
 // validates keydown messages in edit controls
@@ -513,24 +506,26 @@ BOOL EditControlKeyDownHandler(HWND hWnd, WPARAM wParam, int i, int d, int v)
 {
 	if (wParam == VK_DELETE)
 	{
+
 		wstring s;
 		int n = GetWindowTextLength(hWnd);
+
+		if (n == 0) return TRUE;
+
 		s.resize(n + 1);						//+1 for \0
-		GetWindowText(hWnd, &s[0], n + 1);
+		GetWindowText(hWnd, &s[0], s.length());
 		s.resize(n);
-		int f = (int)s.find('.');
 		int wp, lp;
 		SendMessage(hWnd, EM_GETSEL, (WPARAM)&wp, (LPARAM)&lp);
+		double k = -1;
+		if (n > 0 && s[0] != '.') k = stod(s, NULL);
+		wp == lp ? s.erase(wp, 1) : s.erase(wp, lp - wp);
+		n = s.length();
+		int f = (int)s.find('.');
 
-		if (v > 0)
-		{
-			double k = -1;
-			wp == lp ? s.erase(wp, 1) : s.erase(wp, lp - wp);
-			if (s.length() > 0 && s[0] != '.') k = stod(s, NULL);
-			if (k > v) return FALSE;
-		}
-		if (f != string::npos && ((wp == lp && wp == f && n - 1 > i) ||
-			((wp <= f && f < lp) && wp + n - lp > i))) return FALSE;
+		// limit size and length
+		if ((v != 0 && k > v) || (f == string::npos ? n > i : (f > i || n - f - 1 > d)))
+			return FALSE;
 
 		return TRUE;
 	}
